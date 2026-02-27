@@ -1,0 +1,20 @@
+{
+  "days": {
+    "2026-02-26": {
+      "hiddenRoutines": [],
+      "deletedInstances": [],
+      "duplicatedInstances": [],
+      "slotOverrides": {},
+      "orders": {
+        "tc-task-routine-001::0:00-8:00": 1,
+        "tc-task-daily-001::8:00-12:00": 2,
+        "tc-task-weekly-001::12:00-16:00": 3,
+        "tc-task-reminder-001::12:00-16:00": 4
+      }
+    }
+  },
+  "metadata": {
+    "version": "1.0",
+    "lastUpdated": "2026-02-26T00:00:00.000Z"
+  }
+}
