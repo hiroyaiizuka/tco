@@ -1,6 +1,7 @@
 import type { ServiceContainer } from '../cli.js';
 import { normalizeReminderTime } from '../services/FrontmatterService.js';
 import { formatOutput } from '../utils/output.js';
+import { isValidTaskId } from '../utils/security.js';
 
 interface RemindOptions {
   json: boolean;
@@ -13,6 +14,17 @@ export async function remindCommand(
   taskId: string,
   options: RemindOptions = { json: false, clear: false },
 ): Promise<void> {
+  if (!isValidTaskId(taskId)) {
+    const msg = `Invalid taskId format: "${taskId}". Expected "tc-task-<id>".`;
+    if (options.json) {
+      console.log(formatOutput({ success: false, error: msg }, true));
+    } else {
+      console.error(msg);
+    }
+    process.exit(1);
+    return;
+  }
+
   if (!options.time && !options.clear) {
     const msg = 'Specify --time <HH:mm> to set or --clear to remove a reminder.';
     if (options.json) {

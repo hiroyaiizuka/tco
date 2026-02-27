@@ -1,6 +1,7 @@
 import type { DayState, MonthlyDayStateFile, HiddenRoutine, DeletedInstance } from '../types/index.js';
 import type { VaultService } from './VaultService.js';
 import type { PathService } from './PathService.js';
+import { isValidDayKey, isValidMonthKey, safeFromEntries } from '../utils/security.js';
 
 const DAY_STATE_VERSION = '1.0';
 
@@ -27,6 +28,9 @@ export class DayStateService {
   ) {}
 
   private getStatePath(monthKey: string): string {
+    if (!isValidMonthKey(monthKey)) {
+      throw new Error(`Invalid month key format: "${monthKey}". Expected YYYY-MM.`);
+    }
     return `${this.pathService.getLogDataPath()}/${monthKey}-state.json`;
   }
 
@@ -123,6 +127,7 @@ export class DayStateService {
       const record = state as { days?: Record<string, unknown>; metadata?: Record<string, unknown> };
       if (record.days && typeof record.days === 'object') {
         for (const [key, value] of Object.entries(record.days)) {
+          if (!isValidDayKey(key)) continue;
           normalized.days[key] = this.normalizeDayState(value);
         }
       }
@@ -152,10 +157,10 @@ export class DayStateService {
       day.duplicatedInstances = record.duplicatedInstances.filter(Boolean) as DayState['duplicatedInstances'];
     }
     if (record.slotOverrides && typeof record.slotOverrides === 'object') {
-      day.slotOverrides = Object.fromEntries(
+      day.slotOverrides = safeFromEntries(
         Object.entries(record.slotOverrides as Record<string, unknown>)
-          .filter(([, val]) => typeof val === 'string'),
-      ) as Record<string, string>;
+          .filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+      );
     }
     if (record.slotOverridesMeta && typeof record.slotOverridesMeta === 'object') {
       const entries = Object.entries(record.slotOverridesMeta as Record<string, unknown>)
@@ -165,19 +170,19 @@ export class DayStateService {
           return typeof m.slotKey === 'string' && typeof m.updatedAt === 'number';
         });
       if (entries.length > 0) {
-        day.slotOverridesMeta = Object.fromEntries(
+        day.slotOverridesMeta = safeFromEntries(
           entries.map(([key, val]) => {
             const m = val as { slotKey: string; updatedAt: number };
-            return [key, { slotKey: m.slotKey, updatedAt: m.updatedAt }];
+            return [key, { slotKey: m.slotKey, updatedAt: m.updatedAt }] as [string, { slotKey: string; updatedAt: number }];
           }),
         );
       }
     }
     if (record.orders && typeof record.orders === 'object') {
-      day.orders = Object.fromEntries(
+      day.orders = safeFromEntries(
         Object.entries(record.orders as Record<string, unknown>)
-          .filter(([, val]) => typeof val === 'number'),
-      ) as Record<string, number>;
+          .filter((entry): entry is [string, number] => typeof entry[1] === 'number'),
+      );
     }
     if (record.ordersMeta && typeof record.ordersMeta === 'object') {
       const entries = Object.entries(record.ordersMeta as Record<string, unknown>)
@@ -187,10 +192,10 @@ export class DayStateService {
           return typeof m.order === 'number' && typeof m.updatedAt === 'number';
         });
       if (entries.length > 0) {
-        day.ordersMeta = Object.fromEntries(
+        day.ordersMeta = safeFromEntries(
           entries.map(([key, val]) => {
             const m = val as { order: number; updatedAt: number };
-            return [key, { order: m.order, updatedAt: m.updatedAt }];
+            return [key, { order: m.order, updatedAt: m.updatedAt }] as [string, { order: number; updatedAt: number }];
           }),
         );
       }

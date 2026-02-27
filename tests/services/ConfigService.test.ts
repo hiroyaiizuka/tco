@@ -43,6 +43,74 @@ describe('ConfigService', () => {
     });
   });
 
+  describe('loadConfig schema validation', () => {
+    let tempRoot: string;
+
+    beforeEach(async () => {
+      tempRoot = await mkdtemp(join(tmpdir(), 'tco-config-schema-'));
+    });
+
+    afterEach(async () => {
+      if (tempRoot) {
+        await rm(tempRoot, { recursive: true, force: true });
+      }
+    });
+
+    it('should return null when vaultPath is not a string', async () => {
+      const service = new ConfigService();
+      (service as unknown as { configPath: string }).configPath = join(tempRoot, '.tcorc');
+      await writeFile(join(tempRoot, '.tcorc'), JSON.stringify({ vaultPath: 12345 }), 'utf-8');
+
+      const config = await service.loadConfig();
+      expect(config).toBeNull();
+    });
+
+    it('should return null when vaultPath is empty string', async () => {
+      const service = new ConfigService();
+      (service as unknown as { configPath: string }).configPath = join(tempRoot, '.tcorc');
+      await writeFile(join(tempRoot, '.tcorc'), JSON.stringify({ vaultPath: '' }), 'utf-8');
+
+      const config = await service.loadConfig();
+      expect(config).toBeNull();
+    });
+
+    it('should return null when vaultPath is whitespace only', async () => {
+      const service = new ConfigService();
+      (service as unknown as { configPath: string }).configPath = join(tempRoot, '.tcorc');
+      await writeFile(join(tempRoot, '.tcorc'), JSON.stringify({ vaultPath: '   ' }), 'utf-8');
+
+      const config = await service.loadConfig();
+      expect(config).toBeNull();
+    });
+
+    it('should trim vaultPath whitespace', async () => {
+      const service = new ConfigService();
+      (service as unknown as { configPath: string }).configPath = join(tempRoot, '.tcorc');
+      await writeFile(join(tempRoot, '.tcorc'), JSON.stringify({ vaultPath: '  /my/vault  ' }), 'utf-8');
+
+      const config = await service.loadConfig();
+      expect(config).toEqual({ vaultPath: '/my/vault' });
+    });
+
+    it('should return null when JSON is an array', async () => {
+      const service = new ConfigService();
+      (service as unknown as { configPath: string }).configPath = join(tempRoot, '.tcorc');
+      await writeFile(join(tempRoot, '.tcorc'), '["/some/path"]', 'utf-8');
+
+      const config = await service.loadConfig();
+      expect(config).toBeNull();
+    });
+
+    it('should return null when vaultPath property is missing', async () => {
+      const service = new ConfigService();
+      (service as unknown as { configPath: string }).configPath = join(tempRoot, '.tcorc');
+      await writeFile(join(tempRoot, '.tcorc'), JSON.stringify({ other: 'value' }), 'utf-8');
+
+      const config = await service.loadConfig();
+      expect(config).toBeNull();
+    });
+  });
+
   describe('validateObsidianVaultPath', () => {
     let tempRoot: string;
 

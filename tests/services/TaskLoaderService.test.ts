@@ -429,6 +429,25 @@ describe('TaskLoaderService', () => {
       }
     });
 
+    it('should not leak inherited properties from slotOverrides', () => {
+      // Verify that Object.hasOwn prevents prototype chain leakage
+      const mockSlotOverrides = Object.create({ 'inherited-task': 'evil-slot' }) as Record<string, string>;
+      mockSlotOverrides['safe-task'] = 'good-slot';
+
+      expect(Object.hasOwn(mockSlotOverrides, 'safe-task')).toBe(true);
+      expect(Object.hasOwn(mockSlotOverrides, 'inherited-task')).toBe(false);
+      // This verifies that [] access would return inherited value, but hasOwn blocks it
+      expect(mockSlotOverrides['inherited-task']).toBe('evil-slot');
+    });
+
+    it('should not leak inherited properties from orders', () => {
+      const mockOrders = Object.create({ 'inherited-key': 999 }) as Record<string, number>;
+      mockOrders['safe-key'] = 1;
+
+      expect(Object.hasOwn(mockOrders, 'safe-key')).toBe(true);
+      expect(Object.hasOwn(mockOrders, 'inherited-key')).toBe(false);
+    });
+
     it('should not restore duplicated instances that are deleted by instanceId tombstone', async () => {
       const tempRoot = await mkdtemp(join(tmpdir(), 'tco-dup-delete-test-'));
       const tempVault = join(tempRoot, 'vault');

@@ -224,7 +224,7 @@ export class TaskLoaderService {
     const taskId = taskData.taskId;
 
     // 1. Check slot overrides in DayState
-    if (taskId && dayState.slotOverrides[taskId]) {
+    if (taskId && Object.hasOwn(dayState.slotOverrides, taskId)) {
       return dayState.slotOverrides[taskId];
     }
 
@@ -323,8 +323,10 @@ export class TaskLoaderService {
         // Sort by order if enabled and available
         const orderKeyA = `${a.task.taskId || a.task.filePath}::${a.slotKey}`;
         const orderKeyB = `${b.task.taskId || b.task.filePath}::${b.slotKey}`;
-        const orderA = dayState.orders[orderKeyA] ?? dayState.ordersMeta?.[orderKeyA]?.order;
-        const orderB = dayState.orders[orderKeyB] ?? dayState.ordersMeta?.[orderKeyB]?.order;
+        const orderA = (Object.hasOwn(dayState.orders, orderKeyA) ? dayState.orders[orderKeyA] : undefined)
+          ?? (dayState.ordersMeta && Object.hasOwn(dayState.ordersMeta, orderKeyA) ? dayState.ordersMeta[orderKeyA]?.order : undefined);
+        const orderB = (Object.hasOwn(dayState.orders, orderKeyB) ? dayState.orders[orderKeyB] : undefined)
+          ?? (dayState.ordersMeta && Object.hasOwn(dayState.ordersMeta, orderKeyB) ? dayState.ordersMeta[orderKeyB]?.order : undefined);
 
         if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
         if (orderA !== undefined) return -1;

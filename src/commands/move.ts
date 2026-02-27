@@ -2,6 +2,7 @@ import type { ServiceContainer } from '../cli.js';
 import { resolveDate } from '../utils/date.js';
 import { formatOutput } from '../utils/output.js';
 import { SectionConfigService } from '../services/SectionConfigService.js';
+import { isValidTaskId } from '../utils/security.js';
 
 interface MoveOptions {
   json: boolean;
@@ -15,6 +16,17 @@ export async function moveCommand(
   taskId: string,
   options: MoveOptions = { json: false },
 ): Promise<void> {
+  if (!isValidTaskId(taskId)) {
+    const msg = `Invalid taskId format: "${taskId}". Expected "tc-task-<id>".`;
+    if (options.json) {
+      console.log(formatOutput({ success: false, error: msg }, true));
+    } else {
+      console.error(msg);
+    }
+    process.exit(1);
+    return;
+  }
+
   if (!options.date && !options.slot) {
     const msg = 'Specify --date or --slot for the move operation.';
     if (options.json) {

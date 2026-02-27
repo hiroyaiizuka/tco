@@ -4,6 +4,7 @@ import type { PathService } from './PathService.js';
 import type { FrontmatterService } from './FrontmatterService.js';
 import { DayStateService } from './DayStateService.js';
 import { generateInstanceId } from '../utils/id.js';
+import { isValidTaskId, isSafeKey } from '../utils/security.js';
 
 function cloneDayState(state: DayState): DayState {
   return JSON.parse(JSON.stringify(state)) as DayState;
@@ -21,8 +22,15 @@ export class TaskMutationService {
     private readonly dayStateService: DayStateService,
   ) {}
 
+  private validateTaskId(taskId: string): void {
+    if (!isValidTaskId(taskId)) {
+      throw new Error(`Invalid taskId format: "${taskId}". Expected "tc-task-<id>".`);
+    }
+  }
+
   /** Find a task file by taskId, scanning TaskChute/Task/ folder */
   async findTaskByTaskId(taskId: string): Promise<{ filePath: string; frontmatter: Record<string, unknown> } | null> {
+    this.validateTaskId(taskId);
     const taskFolderPath = this.pathService.getTaskFolderPath();
     const mdFiles = await this.vault.listMarkdownFiles(taskFolderPath);
 
@@ -45,6 +53,7 @@ export class TaskMutationService {
     fromDate: string,
     toDate: string,
   ): Promise<void> {
+    this.validateTaskId(taskId);
     const task = await this.findTaskByTaskId(taskId);
     if (!task) throw new Error(`Task not found: ${taskId}`);
     if (fromDate === toDate) return;
@@ -111,6 +120,7 @@ export class TaskMutationService {
 
       // Transfer slot overrides from source to target
       if (sourceState.slotOverrides[taskId]) {
+        if (!isSafeKey(taskId)) throw new Error(`Unsafe key rejected: "${taskId}".`);
         const slotKey = sourceState.slotOverrides[taskId];
         await updateDay(toDate, (state) => {
           state.slotOverrides[taskId] = slotKey;
@@ -200,9 +210,11 @@ export class TaskMutationService {
     dateKey: string,
     slotKey: string,
   ): Promise<void> {
+    this.validateTaskId(taskId);
     const task = await this.findTaskByTaskId(taskId);
     if (!task) throw new Error(`Task not found: ${taskId}`);
 
+    if (!isSafeKey(taskId)) throw new Error(`Unsafe key rejected: "${taskId}".`);
     await this.dayStateService.updateDay(dateKey, (state) => {
       state.slotOverrides[taskId] = slotKey;
       if (!state.slotOverridesMeta) state.slotOverridesMeta = {};
@@ -216,6 +228,7 @@ export class TaskMutationService {
     dateKey: string,
     permanent: boolean,
   ): Promise<void> {
+    this.validateTaskId(taskId);
     const task = await this.findTaskByTaskId(taskId);
     if (!task) throw new Error(`Task not found: ${taskId}`);
 

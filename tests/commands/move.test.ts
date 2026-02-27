@@ -35,7 +35,7 @@ describe('moveCommand', () => {
 
   it('should reject unknown --slot key in JSON mode', async () => {
     const services = createMockServices();
-    await moveCommand(services, 'tc-task-001', {
+    await moveCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
       json: true,
       from: '2026-02-26',
       slot: 'typo-slot',
@@ -48,9 +48,37 @@ describe('moveCommand', () => {
     expect(parsed.error).toContain('Invalid slot key');
   });
 
+  it('should reject invalid taskId format (human mode)', async () => {
+    const services = createMockServices();
+    await moveCommand(services, '__proto__', {
+      json: false,
+      from: '2026-02-26',
+      date: '2026-02-27',
+    });
+
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid taskId format'),
+    );
+  });
+
+  it('should reject invalid taskId format (JSON mode)', async () => {
+    const services = createMockServices();
+    await moveCommand(services, 'bad-id', {
+      json: true,
+      from: '2026-02-26',
+      date: '2026-02-27',
+    });
+
+    expect(mockExit).toHaveBeenCalledWith(1);
+    const parsed = JSON.parse(mockConsoleLog.mock.calls[0][0]);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error).toContain('Invalid taskId format');
+  });
+
   it('should accept valid --slot key', async () => {
     const services = createMockServices();
-    await moveCommand(services, 'tc-task-001', {
+    await moveCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
       json: false,
       from: '2026-02-26',
       slot: '8:00-12:00',
@@ -58,7 +86,7 @@ describe('moveCommand', () => {
 
     expect(mockExit).not.toHaveBeenCalled();
     expect(services.taskMutationService.moveToSlot).toHaveBeenCalledWith(
-      'tc-task-001',
+      'tc-task-00000000-0000-0000-0000-000000000001',
       '2026-02-26',
       '8:00-12:00',
     );

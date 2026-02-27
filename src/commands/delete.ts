@@ -1,6 +1,7 @@
 import type { ServiceContainer } from '../cli.js';
 import { resolveDate } from '../utils/date.js';
 import { formatOutput } from '../utils/output.js';
+import { isValidTaskId } from '../utils/security.js';
 
 interface DeleteOptions {
   json: boolean;
@@ -13,6 +14,17 @@ export async function deleteCommand(
   taskId: string,
   options: DeleteOptions = { json: false, permanent: false },
 ): Promise<void> {
+  if (!isValidTaskId(taskId)) {
+    const msg = `Invalid taskId format: "${taskId}". Expected "tc-task-<id>".`;
+    if (options.json) {
+      console.log(formatOutput({ success: false, error: msg }, true));
+    } else {
+      console.error(msg);
+    }
+    process.exit(1);
+    return;
+  }
+
   const dateKey = resolveDate(options.date);
 
   try {

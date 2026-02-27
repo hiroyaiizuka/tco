@@ -3,6 +3,7 @@ import type { RoutineType } from '../types/index.js';
 import { formatOutput } from '../utils/output.js';
 import { parseDate, formatDate } from '../utils/date.js';
 import { parseStrictInteger } from '../utils/number.js';
+import { isValidTaskId } from '../utils/security.js';
 
 interface RoutinizeOptions {
   json: boolean;
@@ -50,6 +51,17 @@ export async function routinizeCommand(
 ): Promise<void> {
   let parsedStartDate: Date | undefined;
   let parsedEndDate: Date | undefined;
+
+  if (!isValidTaskId(taskId)) {
+    const msg = `Invalid taskId format: "${taskId}". Expected "tc-task-<id>".`;
+    if (options.json) {
+      console.log(formatOutput({ success: false, error: msg }, true));
+    } else {
+      console.error(msg);
+    }
+    process.exit(1);
+    return;
+  }
 
   if (!VALID_ROUTINE_TYPES.includes(options.type)) {
     const msg = `Invalid routine type: "${options.type}". Use: ${VALID_ROUTINE_TYPES.join(', ')}`;

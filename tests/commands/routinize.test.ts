@@ -7,7 +7,7 @@ function createMockServices(): ServiceContainer {
       findTaskByTaskId: jest.fn().mockResolvedValue({
         filePath: 'TaskChute/Task/test.md',
         name: 'test',
-        taskId: 'tc-task-001',
+        taskId: 'tc-task-00000000-0000-0000-0000-000000000001',
       }),
     },
     frontmatterService: {
@@ -33,10 +33,41 @@ describe('routinizeCommand', () => {
     mockConsoleLog.mockRestore();
   });
 
+  describe('taskId validation', () => {
+    it('should reject invalid taskId format (human mode)', async () => {
+      const services = createMockServices();
+      await routinizeCommand(services, '__proto__', {
+        json: false,
+        type: 'daily',
+        interval: 1,
+      });
+
+      expect(mockExit).toHaveBeenCalledWith(1);
+      expect(mockConsoleError).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid taskId format'),
+      );
+      expect(services.frontmatterService.updateFrontmatter).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid taskId format (JSON mode)', async () => {
+      const services = createMockServices();
+      await routinizeCommand(services, 'bad-id', {
+        json: true,
+        type: 'daily',
+        interval: 1,
+      });
+
+      expect(mockExit).toHaveBeenCalledWith(1);
+      const parsed = JSON.parse(mockConsoleLog.mock.calls[0][0]);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error).toContain('Invalid taskId format');
+    });
+  });
+
   describe('--interval validation', () => {
     it('should reject NaN interval', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: NaN,
@@ -50,7 +81,7 @@ describe('routinizeCommand', () => {
 
     it('should reject zero interval', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: 0,
@@ -64,7 +95,7 @@ describe('routinizeCommand', () => {
 
     it('should reject negative interval', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: -1,
@@ -78,7 +109,7 @@ describe('routinizeCommand', () => {
 
     it('should reject interval > 1 without --start', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: 2,
@@ -95,7 +126,7 @@ describe('routinizeCommand', () => {
   describe('required params per routine type', () => {
     it('should reject weekly without --weekday', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'weekly',
         interval: 1,
@@ -111,7 +142,7 @@ describe('routinizeCommand', () => {
 
     it('should reject monthly without --week', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'monthly',
         interval: 1,
@@ -128,7 +159,7 @@ describe('routinizeCommand', () => {
 
     it('should reject monthly without --weekday', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'monthly',
         interval: 1,
@@ -145,7 +176,7 @@ describe('routinizeCommand', () => {
 
     it('should reject monthly_date without --monthday', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'monthly_date',
         interval: 1,
@@ -161,7 +192,7 @@ describe('routinizeCommand', () => {
 
     it('should accept weekly with --weekday', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'weekly',
         interval: 1,
@@ -173,7 +204,7 @@ describe('routinizeCommand', () => {
 
     it('should save both routine_weekdays and weekdays for weekly multi-weekday', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'weekly',
         interval: 1,
@@ -191,7 +222,7 @@ describe('routinizeCommand', () => {
 
     it('should save both routine_weekday and weekday for weekly single weekday', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'weekly',
         interval: 1,
@@ -211,7 +242,7 @@ describe('routinizeCommand', () => {
   describe('--start/--end validation', () => {
     it('should reject invalid --start format', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: 1,
@@ -227,7 +258,7 @@ describe('routinizeCommand', () => {
 
     it('should reject non-existent --start date', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: 1,
@@ -243,7 +274,7 @@ describe('routinizeCommand', () => {
 
     it('should reject non-existent --end date', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: 1,
@@ -259,7 +290,7 @@ describe('routinizeCommand', () => {
 
     it('should reject when --end is earlier than --start', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: 1,
@@ -276,7 +307,7 @@ describe('routinizeCommand', () => {
 
     it('should clear target_date when --start is specified', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: 1,
@@ -296,7 +327,7 @@ describe('routinizeCommand', () => {
   describe('strict numeric list validation', () => {
     it('should reject weekday entries with trailing characters', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'weekly',
         interval: 1,
@@ -311,7 +342,7 @@ describe('routinizeCommand', () => {
 
     it('should reject week entries with trailing characters', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'monthly',
         interval: 1,
@@ -327,7 +358,7 @@ describe('routinizeCommand', () => {
 
     it('should reject monthday entries with trailing characters', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'monthly_date',
         interval: 1,
@@ -344,7 +375,7 @@ describe('routinizeCommand', () => {
   describe('cleanup legacy fields', () => {
     it('should clear legacy weekday field when converting to daily', async () => {
       const services = createMockServices();
-      await routinizeCommand(services, 'tc-task-001', {
+      await routinizeCommand(services, 'tc-task-00000000-0000-0000-0000-000000000001', {
         json: false,
         type: 'daily',
         interval: 1,

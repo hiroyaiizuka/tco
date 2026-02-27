@@ -127,6 +127,89 @@ describe('addCommand', () => {
     expect(services.frontmatterService.createFile).not.toHaveBeenCalled();
   });
 
+  it('should reject task names containing control characters', async () => {
+    const services = createMockServices();
+    await addCommand(services, 'hello\x00world', { json: false });
+
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('control characters'),
+    );
+    expect(services.frontmatterService.createFile).not.toHaveBeenCalled();
+  });
+
+  it('should reject task names containing control characters in JSON mode', async () => {
+    const services = createMockServices();
+    await addCommand(services, 'task\x01name', { json: true });
+
+    expect(mockExit).toHaveBeenCalledWith(1);
+    const output = mockConsoleLog.mock.calls[0][0];
+    const parsed = JSON.parse(output);
+    expect(parsed.success).toBe(false);
+    expect(parsed.error).toContain('control characters');
+  });
+
+  it('should reject task names exceeding 255 characters', async () => {
+    const services = createMockServices();
+    const longName = 'a'.repeat(256);
+    await addCommand(services, longName, { json: false });
+
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('too long'),
+    );
+    expect(services.frontmatterService.createFile).not.toHaveBeenCalled();
+  });
+
+  it('should accept task names of exactly 255 characters', async () => {
+    const services = createMockServices();
+    const maxName = 'a'.repeat(255);
+    await addCommand(services, maxName, { json: false });
+
+    expect(mockExit).not.toHaveBeenCalled();
+    expect(services.frontmatterService.createFile).toHaveBeenCalled();
+  });
+
+  it('should reject estimate exceeding 1440 minutes', async () => {
+    const services = createMockServices();
+    await addCommand(services, 'test-task', {
+      json: false,
+      estimate: 1441,
+    });
+
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('estimate'),
+    );
+    expect(services.frontmatterService.createFile).not.toHaveBeenCalled();
+  });
+
+  it('should accept estimate of exactly 1440 minutes', async () => {
+    const services = createMockServices();
+    await addCommand(services, 'test-task', {
+      json: false,
+      estimate: 1440,
+    });
+
+    expect(mockExit).not.toHaveBeenCalled();
+    expect(services.frontmatterService.createFile).toHaveBeenCalled();
+  });
+
+  it('should reject remind exceeding 1440 minutes', async () => {
+    const services = createMockServices();
+    await addCommand(services, 'test-task', {
+      json: false,
+      time: '23:00',
+      remind: 1441,
+    });
+
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('remind'),
+    );
+    expect(services.frontmatterService.createFile).not.toHaveBeenCalled();
+  });
+
   it('should stop without creating file when --time format is invalid', async () => {
     const services = createMockServices();
     await addCommand(services, 'test-task', {

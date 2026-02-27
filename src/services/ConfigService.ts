@@ -17,8 +17,16 @@ export class ConfigService {
   async loadConfig(): Promise<TcoConfig | null> {
     if (!existsSync(this.configPath)) return null;
     try {
-      const raw = await readFile(this.configPath, 'utf-8');
-      return JSON.parse(raw) as TcoConfig;
+      const content = await readFile(this.configPath, 'utf-8');
+      const raw: unknown = JSON.parse(content);
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+      const record = raw as Record<string, unknown>;
+      const vaultPath = Object.hasOwn(record, 'vaultPath')
+        && typeof record.vaultPath === 'string'
+        && record.vaultPath.trim().length > 0
+        ? record.vaultPath.trim()
+        : null;
+      return vaultPath ? { vaultPath } : null;
     } catch {
       return null;
     }

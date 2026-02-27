@@ -2,6 +2,7 @@ import type { ServiceContainer } from '../cli.js';
 import { resolveDate, isValidTime } from '../utils/date.js';
 import { generateTaskId } from '../utils/id.js';
 import { formatOutput } from '../utils/output.js';
+import { isSafeString, MAX_TASK_NAME_LENGTH, MAX_ESTIMATE_MINUTES, MAX_REMIND_MINUTES } from '../utils/security.js';
 
 interface AddOptions {
   json: boolean;
@@ -21,6 +22,28 @@ export async function addCommand(
   const hasTraversalSegment = name.includes('..');
   if (hasPathSeparator || hasTraversalSegment) {
     const msg = `Invalid task name: "${name}". Task name must not contain "/", "\\\\", or "..".`;
+    if (options.json) {
+      console.log(formatOutput({ success: false, error: msg }, true));
+    } else {
+      console.error(msg);
+    }
+    process.exit(1);
+    return;
+  }
+
+  if (!isSafeString(name)) {
+    const msg = `Invalid task name: contains control characters. Task name must not contain control characters or null bytes.`;
+    if (options.json) {
+      console.log(formatOutput({ success: false, error: msg }, true));
+    } else {
+      console.error(msg);
+    }
+    process.exit(1);
+    return;
+  }
+
+  if (name.length > MAX_TASK_NAME_LENGTH) {
+    const msg = `Invalid task name: too long (${name.length} chars). Maximum is ${MAX_TASK_NAME_LENGTH} characters.`;
     if (options.json) {
       console.log(formatOutput({ success: false, error: msg }, true));
     } else {
@@ -67,8 +90,8 @@ export async function addCommand(
   }
 
   if (options.estimate !== undefined) {
-    if (!Number.isFinite(options.estimate) || options.estimate < 0) {
-      const msg = `Invalid estimate value: "${options.estimate}". Must be a non-negative number (minutes).`;
+    if (!Number.isFinite(options.estimate) || options.estimate < 0 || options.estimate > MAX_ESTIMATE_MINUTES) {
+      const msg = `Invalid estimate value: "${options.estimate}". Must be 0-${MAX_ESTIMATE_MINUTES} minutes.`;
       if (options.json) {
         console.log(formatOutput({ success: false, error: msg }, true));
       } else {
@@ -97,8 +120,8 @@ export async function addCommand(
       return;
     }
 
-    if (!Number.isFinite(options.remind) || options.remind < 0) {
-      const msg = `Invalid remind value: "${options.remind}". Must be a non-negative number (minutes).`;
+    if (!Number.isFinite(options.remind) || options.remind < 0 || options.remind > MAX_REMIND_MINUTES) {
+      const msg = `Invalid remind value: "${options.remind}". Must be 0-${MAX_REMIND_MINUTES} minutes.`;
       if (options.json) {
         console.log(formatOutput({ success: false, error: msg }, true));
       } else {
